@@ -7,7 +7,7 @@
 
 PLUGIN_NAME="CustomChannelSelection"
 PKG_BASE="enigma2-plugin-extensions-customchannelselection"
-VERSION="2.0"
+VERSION="2.1"
 USERNAME="popking159"
 REPO="customchannelselection"
 
