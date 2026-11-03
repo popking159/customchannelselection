@@ -11,6 +11,13 @@ VERSION="2.1"
 USERNAME="popking159"
 REPO="customchannelselection"
 
+# Terminal Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 # Workspace paths
 TMP_DIR="/var/volatile/tmp"
 [ -d "$TMP_DIR" ] || TMP_DIR="/tmp"
@@ -21,16 +28,24 @@ PY_VER=""
 ARCH=""
 
 log() {
-    echo "$1"
+    # Automatically colorize based on the log tag
+    case "$1" in
+        *\[INFO\]*) echo -e "${CYAN}$1${NC}" ;;
+        *\[OK\]*) echo -e "${GREEN}$1${NC}" ;;
+        *\[WARN\]*) echo -e "${YELLOW}$1${NC}" ;;
+        *\[ERROR\]*) echo -e "${RED}$1${NC}" ;;
+        *) echo -e "$1" ;;
+    esac
 }
 
 has_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
-echo "===================================================="
-echo "         $PLUGIN_NAME IPK INSTALLER                 "
-echo "===================================================="
+echo -e "${GREEN}====================================================${NC}"
+echo -e "${GREEN}         $PLUGIN_NAME IPK INSTALLER                 ${NC}"
+echo -e "${GREEN}                  by MNASR                          ${NC}"
+echo -e "${GREEN}====================================================${NC}"
 
 # 1. Detect Package Manager
 if has_cmd opkg; then
@@ -68,7 +83,7 @@ log "[INFO] Detected Python Version: Python $PY_VER"
 if [ -f /usr/lib/enigma.info ]; then
     INFO_ARCH=$(grep "^architecture=" /usr/lib/enigma.info | cut -d"=" -f2 | tr -d "'\"")
     case "$INFO_ARCH" in
-        cortexa15hf-neon-vfpv4|armv7ahf-neon|aarch64)
+        cortexa15hf-neon-vfpv4|armv7ahf-neon|aarch64|mips32el)
             ARCH="$INFO_ARCH"
             ;;
     esac
@@ -82,6 +97,8 @@ if [ -z "$ARCH" ] && [ -f /etc/opkg/arch.conf ]; then
         ARCH="armv7ahf-neon"
     elif grep -q "aarch64" /etc/opkg/arch.conf; then
         ARCH="aarch64"
+    elif grep -q "mips32el" /etc/opkg/arch.conf; then
+        ARCH="mips32el"
     fi
 fi
 
@@ -95,6 +112,9 @@ if [ -z "$ARCH" ]; then
         armv7l|arm*)
             ARCH="cortexa15hf-neon-vfpv4"
             ;;
+        mips*|mipsel)
+            ARCH="mips32el"
+            ;;
     esac
 fi
 
@@ -102,7 +122,7 @@ log "[INFO] Detected Architecture: ${ARCH:-Unknown}"
 
 # Verify supported arch and python
 case "$ARCH" in
-    cortexa15hf-neon-vfpv4|armv7ahf-neon|aarch64)
+    cortexa15hf-neon-vfpv4|armv7ahf-neon|aarch64|mips32el)
         ;;
     *)
         log "[ERROR] Unsupported STB architecture: '$ARCH'. Aborting installation."
@@ -124,7 +144,6 @@ PLUGIN_URL="https://github.com/${USERNAME}/${REPO}/raw/refs/heads/main/${IPK_NAM
 TMP_FILE="$TMP_DIR/$IPK_NAME"
 
 log "[INFO] Target Package: $IPK_NAME"
-log "[INFO] Download Link: $PLUGIN_URL"
 
 # 5. Update Package Feeds (Allows IPK to resolve its own dependencies automatically)
 log "[INFO] Updating package feeds..."
@@ -144,9 +163,8 @@ elif has_cmd curl; then
     curl -s -k -L "$PLUGIN_URL" -o "$TMP_FILE"
 fi
 
-if [ ! -s "$TMP_FILE" ]; then
-    log "[ERROR] Download failed or file not found on GitHub!"
-    log "[ERROR] Checked URL: $PLUGIN_URL"
+if [ ! -s "$TMP_FILE" ] || grep -q -i "<html" "$TMP_FILE" || grep -q "404: Not Found" "$TMP_FILE"; then
+    log "[ERROR] Download failed! The package $IPK_NAME does not exist on GitHub."
     rm -f "$TMP_FILE"
     exit 1
 fi
@@ -170,10 +188,10 @@ fi
 rm -f "$TMP_FILE"
 sync
 
-echo "===================================================="
-echo "          $PLUGIN_NAME INSTALLATION COMPLETE        "
-echo "===================================================="
-echo "[INFO] Installed successfully for $ARCH (Python $PY_VER)."
-echo "[INFO] Please restart GUI / Enigma2 to activate changes."
+echo -e "${GREEN}====================================================${NC}"
+echo -e "${GREEN}           $PLUGIN_NAME INSTALLATION COMPLETE       ${NC}"
+echo -e "${GREEN}====================================================${NC}"
+log "[OK] Installed successfully for $ARCH (Python $PY_VER)."
+log "[INFO] Please restart GUI / Enigma2 to activate changes."
 
 exit 0
